@@ -330,6 +330,9 @@ drm_output_render(struct drm_output *output, pixman_region32_t *damage)
 
 	ec->renderer->repaint_output(&output->base, damage);
 
+	pixman_region32_subtract(&ec->primary_plane.damage,
+				 &ec->primary_plane.damage, damage);
+
 	bo = gbm_surface_lock_front_buffer(output->surface);
 	if (!bo) {
 		weston_log("failed to lock front buffer: %m\n");
