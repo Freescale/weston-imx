@@ -42,6 +42,7 @@
 #include <EGL/eglext.h>
 
 #include "compositor.h"
+#include "../shared/cairo-util.h"
 
 struct wayland_compositor {
 	struct weston_compositor	 base;
