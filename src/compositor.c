@@ -2962,6 +2962,7 @@ load_module(const char *name, const char *entrypoint)
 	init = dlsym(module, entrypoint);
 	if (!init) {
 		weston_log("Failed to lookup init function: %s\n", dlerror());
+		dlclose(module);
 		return NULL;
 	}
 
