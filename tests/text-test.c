@@ -130,8 +130,6 @@ TEST(text_test)
 	struct text_model *text_model;
 	struct text_model_state state;
 
-	setenv("WAYLAND_DEBUG", "1", 1);
-
 	client = client_create(100, 100, 100, 100);
 	assert(client);
 
