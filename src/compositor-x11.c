@@ -50,7 +50,7 @@
 
 #include "compositor.h"
 #include "../shared/config-parser.h"
-#include "../shared/cairo-util.h"
+#include "../shared/image-loader.h"
 
 #define DEFAULT_AXIS_STEP_DISTANCE wl_fixed_from_int(10)
 
