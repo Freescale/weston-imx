@@ -2798,6 +2798,9 @@ show_input_panels(struct wl_listener *listener, void *data)
 	struct input_panel_surface *surface, *next;
 	struct weston_surface *ws;
 
+	if (shell->showing_input_panels)
+		return;
+
 	shell->showing_input_panels = true;
 
 	if (!shell->locked)
