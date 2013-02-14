@@ -1721,6 +1721,9 @@ frame_get_pointer_image_for_location(struct frame *frame, struct input *input)
 	struct window *window = frame->widget->window;
 	int location;
 
+	if (window->type != TYPE_TOPLEVEL)
+		return CURSOR_LEFT_PTR;
+
 	location = theme_get_location(t, input->sx, input->sy,
 				      frame->widget->allocation.width,
 				      frame->widget->allocation.height,
@@ -1835,6 +1838,9 @@ frame_button_handler(struct widget *widget,
 	struct window *window = widget->window;
 	struct display *display = window->display;
 	int location;
+
+	if (window->type != TYPE_TOPLEVEL)
+		return;
 
 	location = theme_get_location(display->theme, input->sx, input->sy,
 				      frame->widget->allocation.width,
