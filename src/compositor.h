@@ -33,8 +33,9 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include "version.h"
 #include "matrix.h"
-#include "../shared/config-parser.h"
+#include "config-parser.h"
 #include "weston-egl-ext.h"
 
 #define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
@@ -507,6 +508,9 @@ enum weston_key_state_update {
 	STATE_UPDATE_AUTOMATIC,
 	STATE_UPDATE_NONE,
 };
+
+void
+weston_version(int *major, int *minor, int *micro);
 
 void
 weston_surface_update_transform(struct weston_surface *surface);
