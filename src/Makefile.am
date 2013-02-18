@@ -7,8 +7,9 @@ AM_CPPFLAGS =					\
 	-DLIBEXECDIR='"$(libexecdir)"'
 
 weston_LDFLAGS = -export-dynamic
-weston_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS)
-weston_LDADD = $(COMPOSITOR_LIBS) $(DLOPEN_LIBS) -lm ../shared/libshared.la
+weston_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(LIBUNWIND_CFLAGS)
+weston_LDADD = $(COMPOSITOR_LIBS) $(LIBUNWIND_LIBS) \
+	$(DLOPEN_LIBS) -lm ../shared/libshared.la
 
 weston_SOURCES =				\
 	git-version.h				\

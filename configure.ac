@@ -240,6 +240,13 @@ fi
 AC_SUBST(GCC_CFLAGS)
 AC_SUBST(GCC_CXXFLAGS)
 
+PKG_CHECK_MODULES(LIBUNWIND, libunwind,
+                  [have_libunwind=yes], [have_libunwind=no])
+if test "x$have_libunwind" = xyes; then
+       AC_DEFINE(HAVE_LIBUNWIND, 1, [Have libunwind support])
+fi
+AM_CONDITIONAL(HAVE_LIBUNWIND, [test "x$have_libunwind" = xyes])
+
 WAYLAND_SCANNER_RULES(['$(top_srcdir)/protocol'])
 
 AC_CONFIG_FILES([Makefile
