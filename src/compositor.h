@@ -36,7 +36,6 @@
 #include "version.h"
 #include "matrix.h"
 #include "config-parser.h"
-#include "weston-egl-ext.h"
 
 #define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 

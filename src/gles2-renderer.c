@@ -29,6 +29,7 @@
 #include <assert.h>
 
 #include "compositor.h"
+#include "weston-egl-ext.h"
 
 static const char *
 egl_error_string(EGLint code)
