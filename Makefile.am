@@ -8,3 +8,5 @@ DIST_SUBDIRS = shared src clients data protocol tests wcap man
 
 
 DISTCHECK_CONFIGURE_FLAGS = --disable-setuid-install
+
+EXTRA_DIST = weston.ini
