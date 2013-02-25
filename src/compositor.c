@@ -3305,7 +3305,6 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	weston_compositor_dpms_on(ec);
 	weston_compositor_wake(ec);
 
 	wl_display_run(display);
