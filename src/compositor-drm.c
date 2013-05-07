@@ -31,6 +31,7 @@
 #include <linux/input.h>
 #include <assert.h>
 #include <sys/mman.h>
+#include <time.h>
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -45,6 +46,10 @@
 #include "pixman-renderer.h"
 #include "udev-seat.h"
 #include "launcher-util.h"
+
+#ifndef DRM_CAP_TIMESTAMP_MONOTONIC
+#define DRM_CAP_TIMESTAMP_MONOTONIC 0x6
+#endif
 
 static int option_current_mode = 0;
 static char *output_name;
@@ -108,6 +113,8 @@ struct drm_compositor {
 	int use_pixman;
 
 	uint32_t prev_state;
+
+	clockid_t clock;
 };
 
 struct drm_mode {
@@ -629,10 +636,19 @@ drm_output_start_repaint_loop(struct weston_output *output_base)
 		output_base->compositor;
 	uint32_t fb_id;
 
-	if (output->current)
-		fb_id = output->current->fb_id;
-	else
-		fb_id = output->original_crtc->buffer_id;
+	struct timespec ts;
+
+	if (!output->current) {
+		/* We can't page flip if there's no mode set */
+		uint32_t msec;
+
+		clock_gettime(compositor->clock, &ts);
+		msec = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+		weston_output_finish_frame(output_base, msec);
+		return;
+	}
+
+	fb_id = output->current->fb_id;
 
 	if (drmModePageFlip(compositor->drm.fd, output->crtc_id, fb_id,
 			    DRM_MODE_PAGE_FLIP_EVENT, output) < 0) {
@@ -1151,7 +1167,8 @@ static int
 init_drm(struct drm_compositor *ec, struct udev_device *device)
 {
 	const char *filename, *sysnum;
-	int fd;
+	uint64_t cap;
+	int fd, ret;
 
 	sysnum = udev_device_get_sysnum(device);
 	if (sysnum)
@@ -1174,6 +1191,11 @@ init_drm(struct drm_compositor *ec, struct udev_device *device)
 
 	ec->drm.fd = fd;
 
+	ret = drmGetCap(fd, DRM_CAP_TIMESTAMP_MONOTONIC, &cap);
+	if (ret == 0 && cap == 1)
+		ec->clock = CLOCK_MONOTONIC;
+	else
+		ec->clock = CLOCK_REALTIME;
 
 	return 0;
 }
