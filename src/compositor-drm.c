@@ -568,6 +568,7 @@ drm_output_repaint(struct weston_output *output_base,
 			weston_log("set mode failed: %m\n");
 			return;
 		}
+		output_base->set_dpms(output_base, WESTON_DPMS_ON);
 	}
 
 	if (drmModePageFlip(compositor->drm.fd, output->crtc_id,
