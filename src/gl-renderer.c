@@ -66,6 +66,7 @@ struct gl_surface_state {
 	int num_images;
 
 	struct weston_buffer_reference buffer_ref;
+	int height;
 	int pitch; /* in pixels */
 };
 
@@ -1192,14 +1193,28 @@ gl_renderer_attach(struct weston_surface *es, struct wl_buffer *buffer)
 	}
 
 	if (wl_buffer_is_shm(buffer)) {
-		gs->pitch = wl_shm_buffer_get_stride(buffer) / 4;
-		gs->target = GL_TEXTURE_2D;
+		/* Only allocate a texture if it doesn't match existing one.
+		 * If gs->num_images is not 0, then a switch from DRM allocated
+		 * buffer to a SHM buffer is happening, and we need to allocate
+		 * a new texture buffer. */
+		if (wl_shm_buffer_get_stride(buffer) / 4 != gs->pitch ||
+		    wl_shm_buffer_get_height(buffer) != gs->height ||
+		    gs->num_images > 0) {
+			gs->pitch = wl_shm_buffer_get_stride(buffer) / 4;
+			gs->height = wl_shm_buffer_get_height(buffer);
+			gs->target = GL_TEXTURE_2D;
 
-		ensure_textures(gs, 1);
-		glBindTexture(GL_TEXTURE_2D, gs->textures[0]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT,
-			     gs->pitch, buffer->height, 0,
-			     GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
+			ensure_textures(gs, 1);
+			glBindTexture(GL_TEXTURE_2D, gs->textures[0]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT,
+				     gs->pitch, buffer->height, 0,
+				     GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
+			pixman_region32_union_rect(&gs->texture_damage,
+						   &gs->texture_damage,
+						   0, 0,
+						   gs->pitch, gs->height);
+		}
+
 		if (wl_shm_buffer_get_format(buffer) == WL_SHM_FORMAT_XRGB8888)
 			gs->shader = &gr->texture_shader_rgbx;
 		else
@@ -1258,6 +1273,7 @@ gl_renderer_attach(struct weston_surface *es, struct wl_buffer *buffer)
 		}
 
 		gs->pitch = buffer->width;
+		gs->height = wl_shm_buffer_get_height(buffer);
 	} else {
 		weston_log("unhandled buffer type!\n");
 		weston_buffer_reference(&gs->buffer_ref, NULL);
