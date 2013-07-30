@@ -532,6 +532,7 @@ main(int argc, char *argv[])
 	char *tty = NULL, *new_user = NULL;
 	char *term;
 	int sleep_fork = 0;
+	sigset_t mask;
 	struct option opts[] = {
 		{ "user",    required_argument, NULL, 'u' },
 		{ "tty",     required_argument, NULL, 't' },
@@ -641,6 +642,12 @@ main(int argc, char *argv[])
 		    setuid(wl.pw->pw_uid) < 0)
 			error(1, errno, "dropping privileges failed");
 
+		/* Do not give our signal mask to the new process. */
+		sigemptyset(&mask);
+		sigaddset(&mask, SIGTERM);
+		sigaddset(&mask, SIGCHLD);
+		sigaddset(&mask, SIGINT);
+		sigprocmask(SIG_UNBLOCK, &mask, NULL);
 
 		if (sleep_fork) {
 			if (wl.verbose)
