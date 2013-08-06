@@ -234,8 +234,11 @@ weston_drag_set_focus(struct weston_drag *drag, struct weston_surface *surface,
 	display = wl_client_get_display(wl_resource_get_client(resource));
 	serial = wl_display_next_serial(display);
 
-	if (drag->data_source)
+	if (drag->data_source) {
 		offer = wl_data_source_send_offer(drag->data_source, resource);
+		if (offer == NULL)
+			return;
+	}
 
 	wl_data_device_send_enter(resource, serial, surface->resource,
 				  sx, sy, offer);
