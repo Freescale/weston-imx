@@ -165,6 +165,19 @@ gl_renderer_la_SOURCES =			\
 	src/gl-renderer.c			\
 	src/vertex-clipping.c			\
 	src/vertex-clipping.h
+
+module_LTLIBRARIES += gal2d-renderer.la
+gal2d_renderer_la_LDFLAGS = -module -avoid-version
+gal2d_renderer_la_LIBADD = $(COMPOSITOR_LIBS) $(EGL_LIBS)
+gal2d_renderer_la_CFLAGS =			\
+	$(COMPOSITOR_CFLAGS)			\
+	$(EGL_CFLAGS)				\
+	$(GCC_CFLAGS)
+gal2d_renderer_la_SOURCES =			\
+	src/gal2d-renderer.h			\
+	src/gal2d-renderer.c			\
+	src/vertex-clipping.c			\
+	src/vertex-clipping.h
 endif
 
 if ENABLE_X11_COMPOSITOR
