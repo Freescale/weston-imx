@@ -53,6 +53,7 @@ struct fbdev_compositor {
 	struct udev_input input;
 	int use_pixman;
 	struct wl_listener session_listener;
+	EGLNativeDisplayType display;
 };
 
 struct fbdev_screeninfo {
@@ -87,6 +88,9 @@ struct fbdev_output {
 	pixman_image_t *shadow_surface;
 	void *shadow_buf;
 	uint8_t depth;
+
+	EGLNativeDisplayType display;
+	EGLNativeWindowType  window;
 };
 
 struct fbdev_parameters {
@@ -627,10 +631,15 @@ fbdev_output_create(struct fbdev_compositor *compositor,
 			goto out_shadow_surface;
 	} else {
 		setenv("HYBRIS_EGLPLATFORM", "wayland", 1);
+		output->window = fbCreateWindow(compositor->display, -1, -1, 0, 0);
+		if (output->window == NULL) {
+			fprintf(stderr, "failed to create window\n");
+			return 0;
+		}
 		if (gl_renderer->output_create(&output->base,
-					       (EGLNativeWindowType)NULL,
-					       gl_renderer->opaque_attribs,
-					       NULL) < 0) {
+						(EGLNativeWindowType)output->window,
+						gl_renderer->opaque_attribs,
+						NULL) < 0) {
 			weston_log("gl_renderer_output_create failed.\n");
 			goto out_shadow_surface;
 		}
@@ -923,7 +932,13 @@ fbdev_compositor_create(struct wl_display *display, int *argc, char *argv[],
 			goto out_launcher;
 		}
 
-		if (gl_renderer->create(&compositor->base, EGL_DEFAULT_DISPLAY,
+		compositor->display = fbGetDisplay(compositor->base.wl_display);
+		if (compositor->display == NULL) {
+			weston_log("fbGetDisplay failed.\n");
+			goto out_launcher;
+		}
+
+		if (gl_renderer->create(&compositor->base, compositor->display,
 					gl_renderer->opaque_attribs,
 					NULL) < 0) {
 			weston_log("gl_renderer_create failed.\n");
