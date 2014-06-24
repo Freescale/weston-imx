@@ -42,7 +42,7 @@ struct gal2d_output_state {
 	
 	int current_buffer;
 	pixman_region32_t buffer_damage[2];
-	EGLNativeDisplayType display;
+	NativeDisplayType display;
     gcoSURF* renderSurf;
 	gctUINT32 nNumBuffers;
 	int activebuffer;
@@ -423,11 +423,9 @@ gal2dBindBuffer(struct weston_surface* es)
 	gcoSURF surface = gs->gco_Surface;	
     struct weston_buffer *buffer = gs->buffer_ref.buffer;
 	gcePOOL pool = gcvPOOL_DEFAULT;
-	gctUINT64 node = 0;
-	gctUINT bytes;
-
-	gcmVERIFY_OK(gcoSURF_QueryVidMemNode(surface, &node,
-						&pool, &bytes));
+    
+	gcmVERIFY_OK(gcoSURF_QueryVidMemNode(surface, gcvNULL,
+						&pool, gcvNULL));
 
 	if(pool != gcvPOOL_USER)
 	{
@@ -801,24 +799,26 @@ draw_view(struct weston_view *ev, struct weston_output *output,
 				  ev->surface->width, ev->surface->height);
 	pixman_region32_subtract(&surface_blend, &surface_blend, &ev->surface->opaque);
 
+    struct gal2d_renderer *gr = get_renderer(ec);
+    
 	if (pixman_region32_not_empty(&ev->surface->opaque)) {
 
 		repaint_region(ev, output, go, &repaint, &ev->surface->opaque);
 	}
 
 	if (pixman_region32_not_empty(&surface_blend)) {
-        struct gal2d_renderer *gr = get_renderer(ec);
-        
+    
         gco2D_EnableAlphaBlend(gr->gcoEngine2d,
-			ev->alpha * 0xFF, ev->alpha * 0xFF,
-			gcvSURF_PIXEL_ALPHA_STRAIGHT, gcvSURF_PIXEL_ALPHA_STRAIGHT,
-			gcvSURF_GLOBAL_ALPHA_OFF, gcvSURF_GLOBAL_ALPHA_OFF,
-			gcvSURF_BLEND_ONE, gcvSURF_BLEND_INVERSED,
-			gcvSURF_COLOR_STRAIGHT, gcvSURF_COLOR_STRAIGHT);
+            ev->alpha * 0xFF, ev->alpha * 0xFF,
+            gcvSURF_PIXEL_ALPHA_STRAIGHT, gcvSURF_PIXEL_ALPHA_STRAIGHT,
+            gcvSURF_GLOBAL_ALPHA_SCALE, gcvSURF_GLOBAL_ALPHA_SCALE,
+            gcvSURF_BLEND_STRAIGHT, gcvSURF_BLEND_INVERSED,
+            gcvSURF_COLOR_STRAIGHT, gcvSURF_COLOR_STRAIGHT);
             
 		repaint_region(ev, output, go, &repaint, &surface_blend);
 	}
 
+    gco2D_DisableAlphaBlend(gr->gcoEngine2d);
 	pixman_region32_fini(&surface_blend);
 
 out:
@@ -866,6 +866,48 @@ gal2d_renderer_repaint_output(struct weston_output *output,
 }
 
 static void
+gal2d_renderer_attach_egl(struct weston_surface *es, struct weston_buffer *buffer)
+{
+    gcsWL_VIV_BUFFER *vivBuffer = wl_resource_get_user_data(buffer->resource);
+    gctUINT width = 0;
+    gctUINT height = 0;
+    gctINT stride = 0;
+    gceSURF_FORMAT format;
+    gcoSURF srcSurf = vivBuffer->surface;
+    gctUINT32 physical;
+    gctPOINTER va =0;
+    gceSTATUS status = gcvSTATUS_OK;
+    struct gal2d_surface_state *gs = get_surface_state(es);
+        
+    if(gs->gco_Surface == gcvNULL)
+    {
+        /** Construct a wrapper. */
+        gcmONERROR(gcoSURF_ConstructWrapper(gcvNULL, &gs->gco_Surface));
+    }
+
+    gcmONERROR(gcoSURF_GetAlignedSize(srcSurf, &width, &height, &stride));
+    gcmONERROR(gcoSURF_GetFormat(srcSurf, gcvNULL, &format));
+    gcmONERROR(gcoSURF_Lock(srcSurf, &physical, (gctPOINTER *)&va));  
+
+    /* Set the buffer. */
+    gcmONERROR(gcoSURF_SetBuffer(gs->gco_Surface,
+                               gcvSURF_BITMAP_NO_VIDMEM,
+                               format,
+                               stride,
+                               (gctPOINTER) va,
+                               (gctUINT32) physical));
+
+    /* Set the window. */
+    gcmONERROR(gcoSURF_SetWindow(gs->gco_Surface, 0, 0, width, height));
+    
+    buffer->width = vivBuffer->width;
+    buffer->height = vivBuffer->height;
+    
+  OnError:
+    galONERROR(status);
+}
+
+static void
 gal2d_renderer_flush_damage(struct weston_surface *surface)
 {
 	struct gal2d_surface_state *gs = get_surface_state(surface);
@@ -900,10 +942,7 @@ gal2d_renderer_flush_damage(struct weston_surface *surface)
 		gal2dBindBuffer(surface);
 	}
 	else
-	{
-		gcsWL_VIV_BUFFER *vivBuffer = (gcsWL_VIV_BUFFER *)buffer;
-		gs->gco_Surface = vivBuffer->surface;
-	}
+        gal2d_renderer_attach_egl(surface, buffer);
 
 done:
 	pixman_region32_fini(&gs->texture_damage);
@@ -937,19 +976,17 @@ gal2d_renderer_attach(struct weston_surface *es, struct weston_buffer *buffer)
 		}
 	}
 	else
-	{
-		gcsWL_VIV_BUFFER *vivBuffer = wl_resource_get_user_data(buffer->resource);
-		gs->gco_Surface = vivBuffer->surface;
-
-		buffer->width = vivBuffer->width;
-		buffer->height = vivBuffer->height;
-	}
+		gal2d_renderer_attach_egl(es, buffer);
 }
 
 static void
 surface_state_destroy(struct gal2d_surface_state *gs, struct gal2d_renderer *gr)
 {
-	wl_list_remove(&gs->surface_destroy_listener.link);
+	if(gs->gco_Surface)
+    {
+        gcoSURF_Destroy(gs->gco_Surface);
+    }
+    wl_list_remove(&gs->surface_destroy_listener.link);
 	wl_list_remove(&gs->renderer_destroy_listener.link);
 	if(gs->surface)
 		gs->surface->renderer_state = NULL;
@@ -1043,8 +1080,12 @@ gal2d_renderer_output_destroy(struct weston_output *output)
 {
     struct gal2d_output_state *go = get_output_state(output);
     gctUINT32 i;
-    
-	if(go->nNumBuffers <= 1 )
+
+    for (i = 0; i < 2; i++)
+    {
+        pixman_region32_fini(&go->buffer_damage[i]);
+    }
+    if(go->nNumBuffers <= 1 )
 	{
 		if(go->offscreenSurface)
 			gcmVERIFY_OK(gcoSURF_Destroy(go->offscreenSurface));
@@ -1107,8 +1148,8 @@ OnError:
 }
 
 static int
-gal2d_renderer_output_create(struct weston_output *output, EGLNativeDisplayType display,
-				    EGLNativeWindowType window)
+gal2d_renderer_output_create(struct weston_output *output, NativeDisplayType display,
+				    NativeWindowType window)
 
  {
     struct gal2d_renderer *gr = get_renderer(output->compositor);
@@ -1174,6 +1215,9 @@ gal2d_renderer_output_create(struct weston_output *output, EGLNativeDisplayType 
 		gal2d_clear(output);
 		gal2d_flip_surface(output);
 	}
+
+	for (i = 0; i < 2; i++)
+		pixman_region32_init(&go->buffer_damage[i]);
 OnError:
     galONERROR(status);
     /* Return the status. */

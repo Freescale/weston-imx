@@ -24,7 +24,13 @@
 #define __gal_2d_renderer_h_
 
 #include  "compositor.h"
+#ifdef ENABLE_EGL
 #include <EGL/egl.h>
+#else
+#include <HAL/gc_hal_eglplatform.h>
+typedef HALNativeDisplayType NativeDisplayType;
+typedef HALNativeWindowType  NativeWindowType;
+#endif
 
 
 struct gal2d_renderer_interface {
