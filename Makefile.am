@@ -165,6 +165,7 @@ gl_renderer_la_SOURCES =			\
 	src/gl-renderer.c			\
 	src/vertex-clipping.c			\
 	src/vertex-clipping.h
+endif
 
 module_LTLIBRARIES += gal2d-renderer.la
 gal2d_renderer_la_LDFLAGS = -module -avoid-version
@@ -178,7 +179,6 @@ gal2d_renderer_la_SOURCES =			\
 	src/gal2d-renderer.c			\
 	src/vertex-clipping.c			\
 	src/vertex-clipping.h
-endif
 
 if ENABLE_X11_COMPOSITOR
 module_LTLIBRARIES += x11-backend.la
