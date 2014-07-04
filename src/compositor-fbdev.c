@@ -1060,8 +1060,13 @@ backend_init(struct wl_display *display, int *argc, char *argv[],
 	struct fbdev_parameters param = {
 		.tty = 0, /* default to current tty */
 		.device = "/dev/fb0", /* default frame buffer */
+#ifdef ENABLE_EGL
 		.use_gl = 1,
 		.use_gal2d = 0,
+#else
+		.use_gl = 0,
+		.use_gal2d = 1,
+#endif
 	};
 
 	const struct weston_option fbdev_options[] = {
